@@ -115,6 +115,7 @@ class DifyServiceAPIRunner(runner.RequestRunner):
         inputs.update(query.variables)
         
         # 添加微信相关参数
+        self.ap.logger.info(f'{query}')
         if hasattr(query, 'source_platform_object'):
             if query.source_platform_object and isinstance(query.source_platform_object, dict):
                 if 'from_user_name' in query.source_platform_object:
@@ -122,7 +123,7 @@ class DifyServiceAPIRunner(runner.RequestRunner):
                 if 'sender_nickname' in query.source_platform_object:
                     inputs['user_nickname'] = query.source_platform_object['sender_nickname']
                 if 'to_user_name' in query.source_platform_object:
-                    inputs['chatroomid'] = query.source_platform_object['to_user_name']['str']
+                    inputs['chatroom_id'] = query.source_platform_object['to_user_name']['str']
                 if 'chatroom_name' in query.source_platform_object:
                     inputs['chatroom_name'] = query.source_platform_object['chatroom_name']
 
@@ -195,7 +196,7 @@ class DifyServiceAPIRunner(runner.RequestRunner):
                 if 'sender_nickname' in query.source_platform_object:
                     inputs['user_nickname'] = query.source_platform_object['sender_nickname']
                 if 'to_user_name' in query.source_platform_object:
-                    inputs['chatroomid'] = query.source_platform_object['to_user_name']['str']
+                    inputs['chatroom_id'] = query.source_platform_object['to_user_name']['str']
                 if 'chatroom_name' in query.source_platform_object:
                     inputs['chatroom_name'] = query.source_platform_object['chatroom_name']
 
@@ -306,7 +307,7 @@ class DifyServiceAPIRunner(runner.RequestRunner):
                 if 'sender_nickname' in query.source_platform_object:
                     inputs['user_nickname'] = query.source_platform_object['sender_nickname']
                 if 'to_user_name' in query.source_platform_object:
-                    inputs['chatroomid'] = query.source_platform_object['to_user_name']['str']
+                    inputs['chatroom_id'] = query.source_platform_object['to_user_name']['str']
                 if 'chatroom_name' in query.source_platform_object:
                     inputs['chatroom_name'] = query.source_platform_object['chatroom_name']
 
