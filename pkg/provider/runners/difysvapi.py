@@ -116,11 +116,21 @@ class DifyServiceAPIRunner(runner.RequestRunner):
         
         # 添加微信相关参数
         if hasattr(query, 'message_event') and query.message_event:
-            # 获取用户微信ID
+            # 获取用户微信ID和昵称
             if hasattr(query.message_event, 'sender') and query.message_event.sender:
                 inputs['user_wxid'] = query.message_event.sender.id
-                if hasattr(query.message_event.sender, 'nickname'):
-                    inputs['user_nickname'] = query.message_event.sender.nickname
+                # 尝试从不同位置获取昵称
+                if hasattr(query.message_event, 'source_platform_object') and query.message_event.source_platform_object:
+                    if 'sender_nickname' in query.message_event.source_platform_object:
+                        inputs['user_nickname'] = query.message_event.source_platform_object['sender_nickname']
+                    elif 'push_content' in query.message_event.source_platform_object:
+                        # 从push_content提取昵称
+                        push_content = query.message_event.source_platform_object['push_content']
+                        if '在群聊中@了你' in push_content:
+                            inputs['user_nickname'] = push_content.split('在群聊中@了你')[0]
+                # 如果仍未获取到昵称，使用wxid作为默认值
+                if 'user_nickname' not in inputs:
+                    inputs['user_nickname'] = query.message_event.sender.id
             
             # 获取群聊信息
             if query.launcher_type == core_entities.LauncherTypes.GROUP:
@@ -192,11 +202,21 @@ class DifyServiceAPIRunner(runner.RequestRunner):
         
         # 添加微信相关参数
         if hasattr(query, 'message_event') and query.message_event:
-            # 获取用户微信ID
+            # 获取用户微信ID和昵称
             if hasattr(query.message_event, 'sender') and query.message_event.sender:
                 inputs['user_wxid'] = query.message_event.sender.id
-                if hasattr(query.message_event.sender, 'nickname'):
-                    inputs['user_nickname'] = query.message_event.sender.nickname
+                # 尝试从不同位置获取昵称
+                if hasattr(query.message_event, 'source_platform_object') and query.message_event.source_platform_object:
+                    if 'sender_nickname' in query.message_event.source_platform_object:
+                        inputs['user_nickname'] = query.message_event.source_platform_object['sender_nickname']
+                    elif 'push_content' in query.message_event.source_platform_object:
+                        # 从push_content提取昵称
+                        push_content = query.message_event.source_platform_object['push_content']
+                        if '在群聊中@了你' in push_content:
+                            inputs['user_nickname'] = push_content.split('在群聊中@了你')[0]
+                # 如果仍未获取到昵称，使用wxid作为默认值
+                if 'user_nickname' not in inputs:
+                    inputs['user_nickname'] = query.message_event.sender.id
             
             # 获取群聊信息
             if query.launcher_type == core_entities.LauncherTypes.GROUP:
@@ -305,11 +325,21 @@ class DifyServiceAPIRunner(runner.RequestRunner):
         
         # 添加微信相关参数
         if hasattr(query, 'message_event') and query.message_event:
-            # 获取用户微信ID
+            # 获取用户微信ID和昵称
             if hasattr(query.message_event, 'sender') and query.message_event.sender:
                 inputs['user_wxid'] = query.message_event.sender.id
-                if hasattr(query.message_event.sender, 'nickname'):
-                    inputs['user_nickname'] = query.message_event.sender.nickname
+                # 尝试从不同位置获取昵称
+                if hasattr(query.message_event, 'source_platform_object') and query.message_event.source_platform_object:
+                    if 'sender_nickname' in query.message_event.source_platform_object:
+                        inputs['user_nickname'] = query.message_event.source_platform_object['sender_nickname']
+                    elif 'push_content' in query.message_event.source_platform_object:
+                        # 从push_content提取昵称
+                        push_content = query.message_event.source_platform_object['push_content']
+                        if '在群聊中@了你' in push_content:
+                            inputs['user_nickname'] = push_content.split('在群聊中@了你')[0]
+                # 如果仍未获取到昵称，使用wxid作为默认值
+                if 'user_nickname' not in inputs:
+                    inputs['user_nickname'] = query.message_event.sender.id
             
             # 获取群聊信息
             if query.launcher_type == core_entities.LauncherTypes.GROUP:
