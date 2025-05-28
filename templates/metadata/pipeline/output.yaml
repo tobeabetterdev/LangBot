@@ -37,6 +37,10 @@ stages:
             label:
               en_US: Convert to Image
               zh_Hans: 转换为图片
+          - name: card
+            label:
+              en_US: Convert to Card
+              zh_Hans: 转换为卡片
       - name: font-path
         label:
           en_US: Font Path

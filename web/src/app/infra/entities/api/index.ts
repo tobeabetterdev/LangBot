@@ -236,7 +236,7 @@ interface GetPipelineConfig {
     };
     'long-text-processing': {
       'font-path': string;
-      strategy: 'forward' | 'image';
+      strategy: 'forward' | 'image' | 'card';
       threshold: number;
     };
     misc: {

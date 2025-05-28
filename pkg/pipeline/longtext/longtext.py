@@ -35,19 +35,19 @@ class LongTextProcessStage(stage.PipelineStage):
                     if os.name == 'nt':
                         use_font = 'C:/Windows/Fonts/msyh.ttc'
                         if not os.path.exists(use_font):
-                            self.ap.logger.warn(
+                            self.ap.logger.warning(
                                 '未找到字体文件，且无法使用Windows自带字体，更换为转发消息组件以发送长消息，您可以在配置文件中调整相关设置。'
                             )
-                            config['blob_message_strategy'] = 'forward'
+                            config['blob_message_strategy'] = 'card'
                         else:
                             self.ap.logger.info('使用Windows自带字体：' + use_font)
                             config['font-path'] = use_font
                     else:
-                        self.ap.logger.warn(
+                        self.ap.logger.warning(
                             '未找到字体文件，且无法使用系统自带字体，更换为转发消息组件以发送长消息，您可以在配置文件中调整相关设置。'
                         )
 
-                        pipeline_config['output']['long-text-processing']['strategy'] = 'forward'
+                        pipeline_config['output']['long-text-processing']['strategy'] = 'card'
             except Exception:
                 traceback.print_exc()
                 self.ap.logger.error(
@@ -56,7 +56,7 @@ class LongTextProcessStage(stage.PipelineStage):
                     )
                 )
 
-                pipeline_config['output']['long-text-processing']['strategy'] = 'forward'
+                pipeline_config['output']['long-text-processing']['strategy'] = 'card'
 
         for strategy_cls in strategy.preregistered_strategies:
             if strategy_cls.name == config['strategy']:
