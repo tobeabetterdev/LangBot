@@ -115,16 +115,18 @@ class DifyServiceAPIRunner(runner.RequestRunner):
         inputs.update(query.variables)
         
         # 添加微信相关参数
-        if hasattr(query, 'source_platform_object'):
-            if query.source_platform_object and isinstance(query.source_platform_object, dict):
-                if 'from_user_name' in query.source_platform_object:
-                    inputs['user_wxid'] = query.source_platform_object['from_user_name']['str']
-                if 'sender_nickname' in query.source_platform_object:
-                    inputs['user_nickname'] = query.source_platform_object['sender_nickname']
-                if 'to_user_name' in query.source_platform_object:
-                    inputs['chatroom_id'] = query.source_platform_object['to_user_name']['str']
-                if 'chatroom_name' in query.source_platform_object:
-                    inputs['chatroom_name'] = query.source_platform_object['chatroom_name']
+        if hasattr(query, 'message_event') and query.message_event:
+            # 获取用户微信ID
+            if hasattr(query.message_event, 'sender') and query.message_event.sender:
+                inputs['user_wxid'] = query.message_event.sender.id
+                if hasattr(query.message_event.sender, 'nickname'):
+                    inputs['user_nickname'] = query.message_event.sender.nickname
+            
+            # 获取群聊信息
+            if query.launcher_type == core_entities.LauncherTypes.GROUP:
+                inputs['chatroom_id'] = query.launcher_id
+                if hasattr(query.message_event, 'sender') and hasattr(query.message_event.sender, 'group'):
+                    inputs['chatroom_name'] = query.message_event.sender.group.name
         self.ap.logger.info(f'---------{inputs}------------')
 
         chunk = None  # 初始化chunk变量，防止在没有响应时引用错误
@@ -189,16 +191,18 @@ class DifyServiceAPIRunner(runner.RequestRunner):
         inputs.update(query.variables)
         
         # 添加微信相关参数
-        if hasattr(query, 'source_platform_object'):
-            if query.source_platform_object and isinstance(query.source_platform_object, dict):
-                if 'from_user_name' in query.source_platform_object:
-                    inputs['user_wxid'] = query.source_platform_object['from_user_name']['str']
-                if 'sender_nickname' in query.source_platform_object:
-                    inputs['user_nickname'] = query.source_platform_object['sender_nickname']
-                if 'to_user_name' in query.source_platform_object:
-                    inputs['chatroom_id'] = query.source_platform_object['to_user_name']['str']
-                if 'chatroom_name' in query.source_platform_object:
-                    inputs['chatroom_name'] = query.source_platform_object['chatroom_name']
+        if hasattr(query, 'message_event') and query.message_event:
+            # 获取用户微信ID
+            if hasattr(query.message_event, 'sender') and query.message_event.sender:
+                inputs['user_wxid'] = query.message_event.sender.id
+                if hasattr(query.message_event.sender, 'nickname'):
+                    inputs['user_nickname'] = query.message_event.sender.nickname
+            
+            # 获取群聊信息
+            if query.launcher_type == core_entities.LauncherTypes.GROUP:
+                inputs['chatroom_id'] = query.launcher_id
+                if hasattr(query.message_event.sender, 'group'):
+                    inputs['chatroom_name'] = query.message_event.sender.group.name
 
         pending_agent_message = ''
 
@@ -300,16 +304,18 @@ class DifyServiceAPIRunner(runner.RequestRunner):
         inputs.update(query.variables)
         
         # 添加微信相关参数
-        if hasattr(query, 'source_platform_object'):
-            if query.source_platform_object and isinstance(query.source_platform_object, dict):
-                if 'from_user_name' in query.source_platform_object:
-                    inputs['user_wxid'] = query.source_platform_object['from_user_name']['str']
-                if 'sender_nickname' in query.source_platform_object:
-                    inputs['user_nickname'] = query.source_platform_object['sender_nickname']
-                if 'to_user_name' in query.source_platform_object:
-                    inputs['chatroom_id'] = query.source_platform_object['to_user_name']['str']
-                if 'chatroom_name' in query.source_platform_object:
-                    inputs['chatroom_name'] = query.source_platform_object['chatroom_name']
+        if hasattr(query, 'message_event') and query.message_event:
+            # 获取用户微信ID
+            if hasattr(query.message_event, 'sender') and query.message_event.sender:
+                inputs['user_wxid'] = query.message_event.sender.id
+                if hasattr(query.message_event.sender, 'nickname'):
+                    inputs['user_nickname'] = query.message_event.sender.nickname
+            
+            # 获取群聊信息
+            if query.launcher_type == core_entities.LauncherTypes.GROUP:
+                inputs['chatroom_id'] = query.launcher_id
+                if hasattr(query.message_event.sender, 'group'):
+                    inputs['chatroom_name'] = query.message_event.sender.group.name
 
         async for chunk in self.dify_client.workflow_run(
             inputs=inputs,
