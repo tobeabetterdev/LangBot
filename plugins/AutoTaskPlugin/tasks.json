@@ -30,7 +30,7 @@
         "is_running": false
     },
     {
-        "cron": "0 12 3 6 2025",
+        "cron": "0 12 3 6 *",
         "script": "火山大模型到期提醒",
         "target": "person_wxid_xq8d7cpz2wgi21",
         "type": "person",
