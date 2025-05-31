@@ -20,7 +20,7 @@ class CardComponentStrategy(strategy_model.LongTextStrategy):
         message_id = query.variables.get('answer_message_id', '')
         if not message_id:
             # 没有message_id时直接返回清理后的纯文本
-            clean_text = await self._failure_handle(message)
+            clean_text = await self._clean_message(message)
             return [platform_message.Plain(text=clean_text)]
         
         # 调用渲染API
@@ -39,17 +39,28 @@ class CardComponentStrategy(strategy_model.LongTextStrategy):
                         error = await resp.text()
                         self.ap.logger.error(f"Render API error: {error}")
                         # API调用失败时返回清理后的纯文本
-                        clean_text = await self._failure_handle(message)
+                        clean_text = await self._clean_message(message)
                         return [platform_message.Plain(text=clean_text)]
         except Exception as e:
             self.ap.logger.error(f"Render API exception: {str(e)}")
-            clean_text = await self._failure_handle(message)
+            clean_text = await self._clean_message(message)
             return [platform_message.Plain(text=clean_text)]
+
+        # 获取发送者昵称
+        sender_nickname = "用户"
+        if query.message_event and hasattr(query.message_event, 'source_platform_object'):
+            source_obj = query.message_event.source_platform_object
+            if 'sender_nickname' in source_obj:
+                sender_nickname = source_obj['sender_nickname']
+            elif 'push_content' in source_obj:
+                push_content = source_obj['push_content']
+                if '在群聊中@了你' in push_content:
+                    sender_nickname = push_content.split('在群聊中@了你')[0]
 
         # 构建微信卡片消息
         app_msg = f'''
 <appmsg sdkver="1">
-    <title>点击一下你就知道</title>
+    <title>@{sender_nickname}</title>
     <des>{query.user_message.content[0].text}</des>
     <url>{result_url}</url>
     <thumburl>{thumb_url}</thumburl>
@@ -62,12 +73,11 @@ class CardComponentStrategy(strategy_model.LongTextStrategy):
             WeChatAppMsg(app_msg=app_msg)
         ]
     
-    async def _failure_handle(self, message: str) -> str:
-        """卡片处理失败处理，发送文本消息"""
-        # 清理消息中的思考标签
+    async def _clean_message(self, message: str) -> str:
+        """清理消息中的思考标签"""
         think_pattern = r'<think>.*?</think>|<detail>.*?</detail>'
         return re.sub(think_pattern, '', message, flags=re.DOTALL)
-    
+
     async def get_dynamic_thumb_url(self) -> str:
         """获取动态缩略图URL"""
         try:

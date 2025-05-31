@@ -115,7 +115,11 @@ class DifyServiceAPIRunner(runner.RequestRunner):
         inputs.update(query.variables)
         
         # 添加微信相关参数
-        inputs['answer_message_id'] = "a_" + str(uuid.uuid4().hex)[:32]
+        # 生成answer_message_id并添加到query.variables
+        answer_message_id = "a_" + str(uuid.uuid4().hex)[:32]
+        inputs['answer_message_id'] = answer_message_id
+        query.variables['answer_message_id'] = answer_message_id
+        
         if hasattr(query, 'message_event') and query.message_event:
             # 获取用户微信ID和昵称
             if hasattr(query.message_event, 'sender') and query.message_event.sender:
