@@ -1,7 +1,8 @@
 import requests
 
 def get_moyu_news():
-    api_url = "https://dayu.qqsuu.cn/moyuribao/apis.php"  # API 地址
+    # 使用HTTP协议避免SSL证书问题
+    api_url = "http://dayu.qqsuu.cn/moyuribao/apis.php"  # API 地址
 
     try:
         response = requests.get(api_url)
@@ -18,7 +19,9 @@ def get_moyu_news():
 def main():
     image_url = get_moyu_news()  # 获取图片 URL
     if image_url and image_url.startswith("http"):
-        markdown_image_link = f"![Moyu Image]({image_url})"  # 转换为 Markdown 格式
+        # 确保图片链接使用HTTPS（如果支持）
+        secure_url = image_url.replace('http://', 'https://', 1)
+        markdown_image_link = f"![Moyu Image]({secure_url})"  # 转换为 Markdown 格式
         print(markdown_image_link)  # 打印 Markdown 图片链接
     else:
         print("无法获取图片或图片链接无效")  # 打印错误信息
