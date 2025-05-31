@@ -50,14 +50,14 @@ class DifyServiceAPIRunner(runner.RequestRunner):
 
         if self.pipeline_config['ai']['dify-service-api']['thinking-convert'] == 'remove':
             return re.sub(
-                r'<details style="color:gray;background-color: #f8f8f8;padding: 8px;border-radius: 4px;" open> <summary> Thinking... </summary>.*?</details>',
+                r'<think>.*?</think>|<detail>.*?</detail>',
                 '',
                 resp_text,
                 flags=re.DOTALL,
             )
 
         if self.pipeline_config['ai']['dify-service-api']['thinking-convert'] == 'plain':
-            pattern = r'<details style="color:gray;background-color: #f8f8f8;padding: 8px;border-radius: 4px;" open> <summary> Thinking... </summary>(.*?)</details>'
+            pattern = r'<think>.*?</think>|<detail>.*?</detail>'
             thinking_text = re.search(pattern, resp_text, flags=re.DOTALL)
             content_text = re.sub(pattern, '', resp_text, flags=re.DOTALL)
             return f'<think>{thinking_text.group(1)}</think>\n{content_text}'
@@ -115,6 +115,7 @@ class DifyServiceAPIRunner(runner.RequestRunner):
         inputs.update(query.variables)
         
         # 添加微信相关参数
+        inputs['answer_message_id'] = "a_" + str(uuid.uuid4().hex)[:32]
         if hasattr(query, 'message_event') and query.message_event:
             # 获取用户微信ID和昵称
             if hasattr(query.message_event, 'sender') and query.message_event.sender:

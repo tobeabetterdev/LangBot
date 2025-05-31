@@ -1,5 +1,4 @@
 import requests
-import websockets
 import websocket
 import json
 import time
