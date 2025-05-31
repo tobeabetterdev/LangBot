@@ -24,27 +24,8 @@ class CardComponentStrategy(strategy_model.LongTextStrategy):
             return [platform_message.Plain(text=clean_text)]
         
         # 调用渲染API
-        render_url = f"http://192.168.110.254:8123/conversations/messages/{message_id}"
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(render_url, json={"markdown": message}) as resp:
-                    if resp.status == 200:
-                        result_json = await resp.json()
-                        result_url = result_json['url']
-                        # 替换localhost为生产域名
-                        result_url = result_url.replace('http://localhost:8080', 'https://sp.jiudingsupply.com')
-                        
-                        thumb_url = await self.get_dynamic_thumb_url()
-                    else:
-                        error = await resp.text()
-                        self.ap.logger.error(f"Render API error: {error}")
-                        # API调用失败时返回清理后的纯文本
-                        clean_text = await self._clean_message(message)
-                        return [platform_message.Plain(text=clean_text)]
-        except Exception as e:
-            self.ap.logger.error(f"Render API exception: {str(e)}")
-            clean_text = await self._clean_message(message)
-            return [platform_message.Plain(text=clean_text)]
+        render_url = f"https://sp.jiudingsupply.com/mra/messages/{message_id}"
+        thumb_url = 'https://api.pearktrue.cn/api/animal/'
 
         # 获取发送者昵称
         sender_nickname = "用户"
@@ -62,7 +43,7 @@ class CardComponentStrategy(strategy_model.LongTextStrategy):
 <appmsg sdkver="1">
     <title>@{sender_nickname}</title>
     <des>{query.user_message.content[0].text}</des>
-    <url>{result_url}</url>
+    <url>{render_url}</url>
     <thumburl>{thumb_url}</thumburl>
     <type>5</type>
     <sourceusername>wxid_una7mdzddc8y22</sourceusername>
@@ -77,20 +58,3 @@ class CardComponentStrategy(strategy_model.LongTextStrategy):
         """清理消息中的思考标签"""
         think_pattern = r'<think>.*?</think>|<detail>.*?</detail>'
         return re.sub(think_pattern, '', message, flags=re.DOTALL)
-
-    async def get_dynamic_thumb_url(self) -> str:
-        """获取动态缩略图URL"""
-        try:
-            zoomout_url = "http://192.168.110.254:8123/mra/zoomout?url=https://api.pearktrue.cn/api/animal/"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(zoomout_url) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        thumb_url = data.get("url", "")
-                        if thumb_url:
-                            # 替换localhost为生产域名
-                            return thumb_url.replace('http://localhost:8080', 'https://sp.jiudingsupply.com')
-        except Exception as e:
-            self.ap.logger.error(f"获取动态缩略图URL失败: {e}")
-        # 失败时返回默认
-        return ""
