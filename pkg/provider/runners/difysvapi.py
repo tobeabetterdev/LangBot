@@ -57,7 +57,7 @@ class DifyServiceAPIRunner(runner.RequestRunner):
             )
 
         if self.pipeline_config['ai']['dify-service-api']['thinking-convert'] == 'plain':
-            pattern = r'<think>.*?</think>|<detail>.*?</detail>'
+            pattern = r'<detail>.*?</detail>'
             thinking_text = re.search(pattern, resp_text, flags=re.DOTALL)
             content_text = re.sub(pattern, '', resp_text, flags=re.DOTALL)
             return f'<think>{thinking_text.group(1)}</think>\n{content_text}'
