@@ -16,7 +16,7 @@ class CommandTool(BasePlugin):
     # 插件加载时触发
     def __init__(self, host: APIHost):
         self.host = host
-        self.ap = host.app
+        self.ap = host.ap
 
     # 异步初始化
     async def initialize(self):
@@ -172,10 +172,10 @@ class CommandTool(BasePlugin):
             # 构造新的 Query 对象
             query = core_entities.Query(
                 session=core_entities.Session(
-                    session_id=str(uuid.uuid4()),
+                    session_id='command_tool@plugin',
                     launcher_id=launcher_id,
                     launcher_type=core_entities.LauncherTypes(launcher_type),
-                    using_conversation=core_entities.Conversation(uuid=str(uuid.uuid4()))
+                    using_conversation=core_entities.Conversation(uuid='command_tool@plugin')
                 ),
                 user_message=core_entities.Message(
                     role="user",
@@ -201,38 +201,3 @@ class CommandTool(BasePlugin):
                     message_chain=MessageChain(["服务调用失败，请稍后再试"]),
                     event=ctx.event
                 )
-            return
-        
-        # 非热榜指令保持原有处理逻辑
-        # 构造 Query 对象
-        query = core_entities.Query(
-            session=core_entities.Session(
-                session_id='command_tool@plugin',
-                launcher_id=launcher_id,
-                launcher_type=core_entities.LauncherTypes(launcher_type),
-                using_conversation=core_entities.Conversation(uuid=str(uuid.uuid4()))
-            ),
-            user_message=core_entities.Message(
-                role="user",
-                content=msg
-            ),
-            message_event=ctx.event,
-            variables={}
-        )
-
-        # 调用 Dify 服务
-        response = await self.call_dify_service(pipeline_cfg, query)
-        
-        if response:
-            # 回复消息
-            await self.host.send_group_message(
-                launcher_id=launcher_id,
-                message_chain=MessageChain([response]),
-                event=ctx.event
-            )
-        else:
-            await self.host.send_group_message(
-                launcher_id=launcher_id,
-                message_chain=MessageChain(["服务调用失败，请稍后再试"]),
-                event=ctx.event
-            )
