@@ -2,8 +2,9 @@ import requests
 
 def get_morning_news():
     api_urls = [
-        "https://api.suxun.site/api/sixs",  # 主API
-        "https://api.03c3.cn/api/zb",       # 备API
+        "https://api.suxun.site/api/sixs",  # 主
+        "https://api.52vmy.cn/api/wl/60s",  # 备1
+        "https://api.03c3.cn/api/zb",       # 备2
     ]
     
     for url in api_urls:
