@@ -1,9 +1,9 @@
-import requests
-import websockets
 import websocket
 import json
 import time
 import httpx
+
+from libs.wechatpad_api.api.admin import AdminApi
 
 from libs.wechatpad_api.client import WeChatPadClient
 
@@ -13,35 +13,30 @@ import traceback
 import time
 import re
 import base64
-import uuid
 import json
 import os
 import copy
-import datetime
 import threading
 
 import quart
-import aiohttp
 
 from .. import adapter
-from ...pipeline.longtext.strategies import forward
 from ...core import app
 from ..types import message as platform_message
 from ..types import events as platform_events
 from ..types import entities as platform_entities
-from ...utils import image
 from ..logger import EventLogger
 import xml.etree.ElementTree as ET
-from typing import Optional, List, Tuple
+from typing import Optional, Tuple
 from functools import partial
 import logging
 
 class WeChatPadMessageConverter(adapter.MessageConverter):
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, logger: logging.Logger):
         self.config = config
-        self.bot = WeChatPadClient(self.config["wechatpad_url"],self.config["token"])
-        self.logger = logging.getLogger("WeChatPadMessageConverter")
+        self.logger = logger
+        self.bot = WeChatPadClient(self.config["wechatpad_url"],self.config["token"],self.logger)
 
     @staticmethod
     async def yiri2target(
@@ -160,12 +155,13 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                 cdnthumburl = img_tag.get('cdnthumburl')
                 # cdnmidimgurl = img_tag.get('cdnmidimgurl')
 
-
-            image_data = self.bot.cdn_download(aeskey=aeskey, file_type=1, file_url=cdnthumburl)
-            if image_data["Data"]['FileData'] == '':
-                image_data = self.bot.cdn_download(aeskey=aeskey, file_type=2, file_url=cdnthumburl)
-            base64_str = image_data["Data"]['FileData']
-            # self.logger.info(f"data:image/png;base64,{base64_str}")
+                image_data = self.bot.cdn_download(aeskey=aeskey, file_type=1, file_url=cdnthumburl)
+                if image_data["Data"]['FileData'] == '':
+                    image_data = self.bot.cdn_download(aeskey=aeskey, file_type=2, file_url=cdnthumburl)
+                base64_str = image_data["Data"]['FileData']
+                # self.logger.info(f"data:image/png;base64,{base64_str}")
+            else:
+                self.logger.error("[图片标签不存在]")
 
 
             elements = [
@@ -196,8 +192,15 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
             if voicemsg is not None:
                 bufid = voicemsg.get('bufid')
                 length = voicemsg.get('voicelength')
-            voice_data = self.bot.get_msg_voice(buf_id=str(bufid), length=int(length), msgid=str(new_msg_id))
-            audio_base64 = voice_data["Data"]['Base64']
+                voice_data = self.bot.get_msg_voice(
+                    bufid=str(bufid),
+                    length=int(length),
+                    new_msg_id=str(new_msg_id),
+                    to_user_name=message['to_user_name']['str']
+                )
+                audio_base64 = voice_data["Data"]['Base64']
+            else:
+                self.logger.error("[语音标签不存在]")
 
             # 验证语音数据有效性
             if not audio_base64:
@@ -260,7 +263,7 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
     ) -> platform_message.MessageChain:
         """处理引用消息 (data_type=57)"""
         message_list = []
-#         self.logger.info("_handler_compound_quote", ET.tostring(xml_data, encoding='unicode'))
+        self.logger.debug(f"_handler_compound_quote: \n{ET.tostring(xml_data, encoding='unicode')}")
         appmsg_data = xml_data.find('.//appmsg')
         quote_data = ""  # 引用原文
         quote_id = None  # 引用消息的原发送者
@@ -419,10 +422,12 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                 appmsg_data = xml_data.find('.//appmsg')
                 tousername = message['to_user_name']['str']
                 if appmsg_data:  # 接收方: 所属微信的wxid
-                    quote_id = appmsg_data.find('.//refermsg').findtext('.//chatusr')  # 引用消息的原发送者
-                    ats_bot = ats_bot or (quote_id == tousername)
+                    refermsg = appmsg_data.find('.//refermsg')
+                    if refermsg is not None:
+                        quote_id = refermsg.findtext('.//chatusr')  # 引用消息的原发送者
+                        ats_bot = ats_bot or (quote_id == tousername)
         except Exception as e:
-            self.logger.error(f"_ats_bot got except: {e}")
+            traceback.print_exc()
         finally:
             return ats_bot
 
@@ -438,7 +443,7 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                 sender_id = line_split[0].strip(":")
                 return raw_content, sender_id
         except Exception as e:
-            self.logger.error(f"_extract_content_and_sender got except: {e}")
+            traceback.print_exc()
         finally:
             return raw_content, None
 
@@ -450,10 +455,10 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
 
 class WeChatPadEventConverter(adapter.EventConverter):
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, logger: logging.Logger, message_converter: WeChatPadMessageConverter):
         self.config = config
-        self.message_converter = WeChatPadMessageConverter(config)
-        self.logger = logging.getLogger("WeChatPadEventConverter")
+        self.logger = logger
+        self.message_converter = message_converter
         
     @staticmethod
     async def yiri2target(
@@ -466,7 +471,7 @@ class WeChatPadEventConverter(adapter.EventConverter):
             event: dict,
             bot_account_id: str
     ) -> platform_events.MessageEvent:
-
+        self.logger.info(f"进入eventconverter_target2yiri. 消息类型: {event.get('msg_type')}, 发送者: {event.get('from_user_name', {}).get('str')}")
         # 排除公众号以及微信团队消息
         if event['from_user_name']['str'].startswith('gh_') \
                 or event['from_user_name']['str']=='weixin'\
@@ -540,19 +545,18 @@ class WeChatPadAdapter(adapter.MessagePlatformAdapter):
         self.logger = logger
         self.quart_app = quart.Quart(__name__)
 
-        self.message_converter = WeChatPadMessageConverter(config)
-        self.event_converter = WeChatPadEventConverter(config)
+        self.message_converter = WeChatPadMessageConverter(config, self.ap.logger)
+        self.event_converter = WeChatPadEventConverter(config, self.ap.logger, self.message_converter) # 传递self.message_converter
+        self.admin_api = AdminApi(self.config["wechatpad_url"], self.config["admin_key"])
 
     async def ws_message(self, data):
         """处理接收到的消息"""
-        # self.ap.logger.debug(f"Gewechat callback event: {data}")
-        # print(data)
-
+        self.ap.logger.debug(f"WechatPadpro消息回调: {data}")
 
         try:
             event = await self.event_converter.target2yiri(data.copy(), self.bot_account_id)
         except Exception as e:
-            await self.logger.error(f"Error in wechatpad callback: {traceback.format_exc()}")
+            self.logger.error(f"WechatPadpro消息回调出错: {traceback.format_exc()}")
 
         if event.__class__ in self.listeners:
             await self.listeners[event.__class__](event, self)
@@ -575,7 +579,7 @@ class WeChatPadAdapter(adapter.MessagePlatformAdapter):
         member_info = []
         if at_targets:
             member_info = self.bot.get_chatroom_member_detail(
-                target_id,
+                chatroom_name=target_id,
             )["Data"]["member_data"]["chatroom_member_list"]
 
         # 处理消息组件
@@ -592,30 +596,26 @@ class WeChatPadAdapter(adapter.MessagePlatformAdapter):
             handler_map = {
                 'text': lambda msg: self.bot.send_text_message(
                     to_wxid=target_id,
-                    message=msg['content'],
-                    ats=at_targets
+                    content=msg['content'],
+                    at_wxid_list=at_targets
                 ),
                 'image': lambda msg: self.bot.send_image_message(
                     to_wxid=target_id,
-                    img_url=msg["image"],
-                    ats = at_targets
+                    image_content=msg["image"],
+                    at_wxid_list = at_targets
                 ),
                 'WeChatEmoji': lambda msg: self.bot.send_emoji_message(
-                    to_wxid=target_id,
-                    emoji_md5=msg['emoji_md5'],
-                    emoji_size=msg['emoji_size']
+                    emoji_list=[{"EmojiMd5": msg['emoji_md5'], "EmojiSize": msg['emoji_size'], "ToUserName": target_id}]
                 ),
 
                 'voice': lambda msg: self.bot.send_voice_message(
-                    to_wxid=target_id,
+                    to_user_name=target_id,
                     voice_data=msg['data'],
-                    voice_duration=msg["duration"],
-                    voice_forma=msg["forma"],
+                    voice_second=msg["duration"],
+                    voice_format=msg["forma"],
                 ),
                 'WeChatAppMsg': lambda msg: self.bot.send_app_message(
-                    to_wxid=target_id,
-                    app_message=msg['app_msg'],
-                    type=0,
+                    app_list=[{"ContentType": 0, "ContentXML": msg['app_msg'], "ToUserName": target_id}]
                 ),
                 'at': lambda msg: None
             }
@@ -665,41 +665,63 @@ class WeChatPadAdapter(adapter.MessagePlatformAdapter):
         pass
 
     async def run_async(self):
+        self.ap.logger.info("WeChatPadAdapter run_async started.")
+        try:
+            self.bot = WeChatPadClient(
+                self.config['wechatpad_url'],
+                self.config["token"],
+                logger=self.logger
+            )
+            self.ap.logger.info("WeChatPadClient initialized in run_async.")
+        except Exception as e:
+            self.ap.logger.error(f"Error initializing WeChatPadClient in run_async: {e}")
+            self.ap.logger.error(traceback.format_exc())
+            return
 
         if not self.config["admin_key"] and not self.config["token"]:
+            self.ap.logger.error("No wechatpad admin key or token, please fill in the config file and restart.")
             raise RuntimeError("无wechatpad管理密匙，请填入配置文件后重启")
         else:
             if self.config["token"]:
-                self.bot = WeChatPadClient(
-                    self.config['wechatpad_url'],
-                    self.config["token"]
-                )
-                data = self.bot.get_login_status()
-                self.ap.logger.info(data)
-                if data["Code"] == 300 and data["Text"] == "你已退出微信":
-                    response = requests.post(
-                        f"{self.config['wechatpad_url']}/admin/GenAuthKey1?key={self.config['admin_key']}",
-                        json={"Count": 1, "Days": 365}
-                    )
-                    if response.status_code != 200:
-                        raise Exception(f"获取token失败: {response.text}")
-                    self.config["token"] = response.json()["Data"][0]
+                try:
+                    data = self.bot.get_login_status()
+                    self.ap.logger.info(f"WeChatPad login status: {data}")
+                    if data["Code"] == 300 and data["Text"] == "你已退出微信":
+                        self.ap.logger.info("Attempting to generate new token...")
+                        response = self.admin_api.gen_auth_key1(
+                            key=self.config['admin_key'],
+                            count=1,
+                            days=365
+                        )
+                        if response["Code"] != 0:
+                            self.ap.logger.error(f"Failed to get token: {response['Text']}")
+                            raise Exception(f"获取token失败: {response['Text']}")
+                        self.config["token"] = response["Data"][0]
+                        self.ap.logger.info("New token generated.")
+                except Exception as e:
+                    self.ap.logger.error(f"Error getting login status or generating token: {e}")
+                    self.ap.logger.error(traceback.format_exc())
+                    return
 
             elif not self.config["token"]:
-                response = requests.post(
-                    f"{self.config['wechatpad_url']}/admin/GenAuthKey1?key={self.config['admin_key']}",
-                    json={"Count": 1, "Days": 365}
-                )
-                if response.status_code != 200:
-                    raise Exception(f"获取token失败: {response.text}")
-                self.config["token"] = response.json()["Data"][0]
+                self.ap.logger.info("Token not found, attempting to generate new token...")
+                try:
+                    response = self.admin_api.gen_auth_key1(
+                        key=self.config['admin_key'],
+                        count=1,
+                        days=365
+                    )
+                    if response["Code"] != 0:
+                        self.ap.logger.error(f"Failed to get token: {response['Text']}")
+                        raise Exception(f"获取token失败: {response['Text']}")
+                    self.config["token"] = response["Data"][0]
+                    self.ap.logger.info("New token generated.")
+                except Exception as e:
+                    self.ap.logger.error(f"Error generating token: {e}")
+                    self.ap.logger.error(traceback.format_exc())
+                    return
 
-        self.bot = WeChatPadClient(
-            self.config['wechatpad_url'],
-            self.config["token"],
-            logger=self.logger
-        )
-        self.ap.logger.info(self.config["token"])
+        self.ap.logger.info(f"Final WeChatPad token: {self.config['token']}")
         thread_1 = threading.Event()
 
 
@@ -711,12 +733,17 @@ class WeChatPadAdapter(adapter.MessagePlatformAdapter):
             # self.ap.logger.info(login_data)
 
 
-            profile =self.bot.get_profile()
-            self.ap.logger.info(profile)
+            try:
+                profile = self.bot.get_profile()
+                self.ap.logger.info(f"WeChatPad profile: {profile}")
 
-            self.bot_account_id = profile["Data"]["userInfo"]["nickName"]["str"]
-            self.config["wxid"] = profile["Data"]["userInfo"]["userName"]["str"]
-            thread_1.set()
+                self.bot_account_id = profile["Data"]["userInfo"]["nickName"]["str"]
+                self.config["wxid"] = profile["Data"]["userInfo"]["userName"]["str"]
+                thread_1.set()
+            except Exception as e:
+                self.ap.logger.error(f"Error getting WeChatPad profile: {e}")
+                self.ap.logger.error(traceback.format_exc())
+                thread_1.set() # Ensure the event is set even on error to avoid blocking
 
 
         # asyncio.create_task(wechat_login_process)
