@@ -415,7 +415,7 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
             platform_message.Unknown(text=f"[未知消息类型 msg_type:{msg_type}]")
         ])
 
-    def _handler_compound_unsupported(
+    async def _handler_compound_unsupported(
             self,
             message: dict,
             xml_data: str,
