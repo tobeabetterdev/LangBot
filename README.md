@@ -26,13 +26,11 @@
 <img src="https://img.shields.io/badge/python-3.10 ~ 3.13 -blue.svg" alt="python">
 [![star](https://gitcode.com/RockChinQ/LangBot/star/badge.svg)](https://gitcode.com/RockChinQ/LangBot)
 
-[简体中文](README.md) / [English](README_EN.md) / [日本語](README_JP.md) / (PR for your language)
+简体中文 / [English](README_EN.md) / [日本語](README_JP.md) / (PR for your language)
 
 </div>
 
 </p>
-
-> 近期 GeWeChat 项目归档，我们已经适配 WeChatPad 协议端，个微恢复正常使用，详情请查看文档。
 
 ## ✨ 特性
 
