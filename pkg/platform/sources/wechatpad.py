@@ -298,16 +298,14 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                     quote_data_message_list.append(platform_message.Plain(quote_data))
                 else:
                     # 引用消息展开
-                    self.logger.info(f'引用消息源：{quote_data}')
                     if quote_data.startswith('<?xml version="1.0"?>'):
                         quote_data = quote_data.replace('<?xml version="1.0"?>', '')
-                    quote_data = re.sub(r'>\s+<', '><', quote_data)
                     quote_data_xml = ET.fromstring(quote_data)
-                    if quote_data_xml.find("img"):
+                    if quote_data_xml.find(".//img"):
                         quote_data_message_list.extend(await self._handler_image(None, quote_data))
-                    elif quote_data_xml.find("voicemsg"):
+                    elif quote_data_xml.find(".//voicemsg"):
                         quote_data_message_list.extend(await self._handler_voice(None, quote_data))
-                    elif quote_data_xml.find("videomsg"):
+                    elif quote_data_xml.find(".//videomsg"):
                         quote_data_message_list.extend(await self._handler_default(None, quote_data))  # 先不处理
                     else:
                         # appmsg
