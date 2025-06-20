@@ -149,7 +149,6 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
 
             # 提取img标签的属性
             img_tag = root.find('img')
-            self.logger.info(f'----------图片处理开始：\n{ET.tostring(img_tag, encoding='unicode')}')
             if img_tag is not None:
                 aeskey = img_tag.get('aeskey')
                 cdnthumburl = img_tag.get('cdnthumburl')
@@ -165,7 +164,6 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                 self.logger.info(f'-------------{base64_str[:50]}')
             else:
                 self.logger.error("[图片标签不存在]")
-                return platform_message.MessageChain([platform_message.Unknown("[图片标签不存在]")])
 
             elements = []
             if base64_str == '':
@@ -305,9 +303,7 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                         quote_data = quote_data.replace('<?xml version="1.0"?>', '')
                     quote_data = re.sub(r'>\s+<', '><', quote_data)
                     quote_data_xml = ET.fromstring(quote_data)
-                    self.logger.info(f'图片处理----------{ET.tostring(quote_data_xml.find('img'), encoding='unicode')}')
                     if quote_data_xml.find("img"):
-                        self.logger.info(f'图片处理----------{quote_data}')
                         quote_data_message_list.extend(await self._handler_image(None, quote_data))
                     elif quote_data_xml.find("voicemsg"):
                         quote_data_message_list.extend(await self._handler_voice(None, quote_data))
