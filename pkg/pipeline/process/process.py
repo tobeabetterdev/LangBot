@@ -1,4 +1,6 @@
 from __future__ import annotations
+import copy
+import pickle
 
 from ...core import entities as core_entities
 from . import handler
@@ -37,7 +39,7 @@ class Processor(stage.PipelineStage):
         message_text = str(query.message_chain).strip()
 
         self.ap.logger.info(
-            f'处理 {query.launcher_type.value}_{query.launcher_id} 的请求({query.query_id}): {self._prepare_query_for_logging(message_text)}'
+            f'处理 {query.launcher_type.value}_{query.launcher_id} 的请求({query.query_id}): {self._prepare_query_for_logging(query.message_chain)}'
         )
 
         async def generator():
@@ -52,20 +54,30 @@ class Processor(stage.PipelineStage):
 
         return generator()
 
-    def _prepare_query_for_logging(self, query):
-        """准备用于日志打印的query对象，截断长字段"""
-        log_query = vars(query).copy()
-        if hasattr(query, 'user_message') and query.user_message:
-            if hasattr(query.user_message, 'content') and isinstance(query.user_message.content, list):
-                log_content = []
-                for content_element in query.user_message.content:
-                    ce_vars = vars(content_element).copy()
-                    if 'image_base64' in ce_vars and ce_vars['image_base64'] is not None:
-                        ce_vars['image_base64'] = ce_vars['image_base64'][:10] + '...' if len(ce_vars['image_base64']) > 10 else ce_vars['image_base64']
-                    log_content.append(ce_vars)
-                log_query['user_message'] = vars(query.user_message).copy()
-                log_query['user_message']['content'] = log_content
-            elif hasattr(query.user_message, 'content') and isinstance(query.user_message.content, str):
-                log_query['user_message'] = vars(query.user_message).copy()
-                log_query['user_message']['content'] = query.user_message.content[:10] + '...' if len(query.user_message.content) > 10 else query.user_message.content
-        return log_query
+    def _prepare_query_for_logging(self, data):
+        """准备用于日志打印的数据，递归地截断长字段，避免序列化问题"""
+        
+        def _truncate_recursive(item):
+            if isinstance(item, dict):
+                new_dict = {}
+                for k, v in item.items():
+                    try:
+                        # 尝试序列化，如果失败则跳过
+                        copy.deepcopy(v)
+                        if 'base64' in k and isinstance(v, str):
+                            new_dict[k] = v[:20] + '...' if len(v) > 20 else v
+                        else:
+                            new_dict[k] = _truncate_recursive(v)
+                    except (TypeError, pickle.PickleError):
+                        new_dict[k] = f"<{type(v).__name__} object is not serializable>"
+                return new_dict
+            elif isinstance(item, list):
+                return [_truncate_recursive(elem) for elem in item]
+            elif hasattr(item, '__dict__'):
+                # 对于对象，只处理它的 __dict__
+                return _truncate_recursive(vars(item))
+            else:
+                return item
+
+        # 不再使用 deepcopy(data)
+        return _truncate_recursive(data)

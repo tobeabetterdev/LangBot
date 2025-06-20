@@ -101,5 +101,7 @@ if __name__ == '__main__':
         exit(1)
 
     loop = asyncio.new_event_loop()
-
-    loop.run_until_complete(main_entry(loop))
+    try:
+        loop.run_until_complete(main_entry(loop))
+    finally:
+        loop.close()

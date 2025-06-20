@@ -139,17 +139,17 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
     async def _handler_image(
             self,
             message: Optional[dict],
-            content_no_preifx: str
+            image_xml: str
     ) -> platform_message.MessageChain:
         """处理图像消息 (msg_type=3)"""
         try:
-            image_xml = content_no_preifx
             if not image_xml:
                 return platform_message.MessageChain([platform_message.Unknown("[图片内容为空]")])
             root = ET.fromstring(image_xml)
 
             # 提取img标签的属性
             img_tag = root.find('img')
+            self.logger.info(f'----------图片处理开始：\n{ET.tostring(img_tag, encoding='unicode')}')
             if img_tag is not None:
                 aeskey = img_tag.get('aeskey')
                 cdnthumburl = img_tag.get('cdnthumburl')
@@ -158,16 +158,24 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                 image_data = self.bot.cdn_download(aeskey=aeskey, file_type=1, file_url=cdnthumburl)
                 if image_data["Data"]['FileData'] == '':
                     image_data = self.bot.cdn_download(aeskey=aeskey, file_type=2, file_url=cdnthumburl)
+                    if image_data["Data"]['FileData'] == '':
+                        image_data = self.bot.cdn_download(aeskey=aeskey, file_type=3, file_url=cdnthumburl)
+
                 base64_str = image_data["Data"]['FileData']
-                # self.logger.info(f"data:image/png;base64,{base64_str}")
+                self.logger.info(f'-------------{base64_str[:50]}')
             else:
                 self.logger.error("[图片标签不存在]")
+                return platform_message.MessageChain([platform_message.Unknown("[图片标签不存在]")])
 
-
-            elements = [
-                platform_message.Image(base64=f"data:image/png;base64,{base64_str}"),
-                # platform_message.WeChatForwardImage(xml_data=image_xml)  # 微信消息转发
-            ]
+            elements = []
+            if base64_str == '':
+                elements = [
+                    platform_message.WeChatForwardImage(xml_data=image_xml)  # 微信消息转发
+                ]
+            else :
+                elements = [
+                    platform_message.Image(base64=f"data:image/png;base64,{base64_str}"),
+                ]
             return platform_message.MessageChain(elements)
         except Exception as e:
             self.logger.error(f"处理图片失败: {str(e)}")
@@ -292,8 +300,14 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                     quote_data_message_list.append(platform_message.Plain(quote_data))
                 else:
                     # 引用消息展开
+                    self.logger.info(f'引用消息源：{quote_data}')
+                    if quote_data.startswith('<?xml version="1.0"?>'):
+                        quote_data = quote_data.replace('<?xml version="1.0"?>', '')
+                    quote_data = re.sub(r'>\s+<', '><', quote_data)
                     quote_data_xml = ET.fromstring(quote_data)
+                    self.logger.info(f'图片处理----------{ET.tostring(quote_data_xml.find('img'), encoding='unicode')}')
                     if quote_data_xml.find("img"):
+                        self.logger.info(f'图片处理----------{quote_data}')
                         quote_data_message_list.extend(await self._handler_image(None, quote_data))
                     elif quote_data_xml.find("voicemsg"):
                         quote_data_message_list.extend(await self._handler_voice(None, quote_data))
