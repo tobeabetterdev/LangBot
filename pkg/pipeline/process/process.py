@@ -37,7 +37,7 @@ class Processor(stage.PipelineStage):
         message_text = str(query.message_chain).strip()
 
         self.ap.logger.info(
-            f'处理 {query.launcher_type.value}_{query.launcher_id} 的请求({query.query_id}): {message_text}'
+            f'处理 {query.launcher_type.value}_{query.launcher_id} 的请求({query.query_id}): {self._prepare_query_for_logging(message_text)}'
         )
 
         async def generator():
@@ -51,3 +51,21 @@ class Processor(stage.PipelineStage):
                     yield result
 
         return generator()
+
+    def _prepare_query_for_logging(self, query):
+        """准备用于日志打印的query对象，截断长字段"""
+        log_query = vars(query).copy()
+        if hasattr(query, 'user_message') and query.user_message:
+            if hasattr(query.user_message, 'content') and isinstance(query.user_message.content, list):
+                log_content = []
+                for content_element in query.user_message.content:
+                    ce_vars = vars(content_element).copy()
+                    if 'image_base64' in ce_vars and ce_vars['image_base64'] is not None:
+                        ce_vars['image_base64'] = ce_vars['image_base64'][:10] + '...' if len(ce_vars['image_base64']) > 10 else ce_vars['image_base64']
+                    log_content.append(ce_vars)
+                log_query['user_message'] = vars(query.user_message).copy()
+                log_query['user_message']['content'] = log_content
+            elif hasattr(query.user_message, 'content') and isinstance(query.user_message.content, str):
+                log_query['user_message'] = vars(query.user_message).copy()
+                log_query['user_message']['content'] = query.user_message.content[:10] + '...' if len(query.user_message.content) > 10 else query.user_message.content
+        return log_query
