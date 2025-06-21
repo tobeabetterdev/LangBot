@@ -301,11 +301,11 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                     if quote_data.startswith('<?xml version="1.0"?>'):
                         quote_data = quote_data.replace('<?xml version="1.0"?>', '')
                     quote_data_xml = ET.fromstring(quote_data)
-                    if quote_data_xml.find(".//img"):
+                    if quote_data_xml.find("img") is not None:
                         quote_data_message_list.extend(await self._handler_image(None, quote_data))
-                    elif quote_data_xml.find(".//voicemsg"):
+                    elif quote_data_xml.find("voicemsg") is not None:
                         quote_data_message_list.extend(await self._handler_voice(None, quote_data))
-                    elif quote_data_xml.find(".//videomsg"):
+                    elif quote_data_xml.find("videomsg") is not None:
                         quote_data_message_list.extend(await self._handler_default(None, quote_data))  # 先不处理
                     else:
                         # appmsg
