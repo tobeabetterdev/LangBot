@@ -161,7 +161,6 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
                         image_data = self.bot.cdn_download(aeskey=aeskey, file_type=3, file_url=cdnthumburl)
 
                 base64_str = image_data["Data"]['FileData']
-                self.logger.info(f'-------------{base64_str[:50]}')
             else:
                 self.logger.error("[图片标签不存在]")
 
@@ -592,13 +591,14 @@ class WeChatPadAdapter(adapter.MessagePlatformAdapter):
     async def ws_message(self, data):
         """处理接收到的消息"""
         self.ap.logger.debug(f"WechatPadpro消息回调: {data}")
-
+        event = None
         try:
             event = await self.event_converter.target2yiri(data.copy(), self.bot_account_id)
         except Exception as e:
-            self.logger.error(f"WechatPadpro消息回调出错: {traceback.format_exc()}")
+            self.ap.logger.error(f"WechatPadpro消息回调出错: {str(e)}\n{traceback.format_exc()}")
+            return 'ok'
 
-        if event.__class__ in self.listeners:
+        if event and event.__class__ in self.listeners:
             await self.listeners[event.__class__](event, self)
 
         return 'ok'
