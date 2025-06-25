@@ -139,13 +139,13 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
     async def _handler_image(
             self,
             message: Optional[dict],
-            image_xml: str
+            content_no_preifx: str
     ) -> platform_message.MessageChain:
         """处理图像消息 (msg_type=3)"""
         try:
-            if not image_xml:
+            if not content_no_preifx:
                 return platform_message.MessageChain([platform_message.Unknown("[图片内容为空]")])
-            root = ET.fromstring(image_xml)
+            root = ET.fromstring(content_no_preifx)
 
             # 提取img标签的属性
             img_tag = root.find('img')
@@ -167,7 +167,7 @@ class WeChatPadMessageConverter(adapter.MessageConverter):
             elements = []
             if base64_str == '':
                 elements = [
-                    platform_message.WeChatForwardImage(xml_data=image_xml)  # 微信消息转发
+                    platform_message.WeChatForwardImage(xml_data=content_no_preifx)  # 微信消息转发
                 ]
             else :
                 elements = [
