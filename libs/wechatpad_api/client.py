@@ -4,7 +4,6 @@ from libs.wechatpad_api.api.friend import FriendApi
 from libs.wechatpad_api.api.message import MessageApi
 from libs.wechatpad_api.api.admin import AdminApi
 from libs.wechatpad_api.api.official_account import OfficialAccountApi
-from libs.wechatpad_api.api.sync_message import SyncMessageApi
 from libs.wechatpad_api.api.user import UserApi
 from libs.wechatpad_api.api.equipment import EquipmentApi
 from libs.wechatpad_api.api.favor import FavorApi
@@ -33,7 +32,6 @@ class WeChatPadClient:
         self._pay_api = PayApi(base_url, token)
         self._qy_api = QyApi(base_url, token)
         self._sns_api = SnsApi(base_url, token)
-        self._sync_message_api = SyncMessageApi(base_url, token)
         self.logger = logger
         self.token = token
 
