@@ -799,8 +799,8 @@ class WeChatPadAdapter(adapter.MessagePlatformAdapter):
                     data = json.loads(message)
                     self.ap.logger.debug(f"Received message: {data}")
                     current_timestamp = int(time.time())
-                    if 'create_time' in data and (current_timestamp - data['create_time']) > 5 * 60:
-                        self.ap.logger.info(f"Message discarded due to timeout: {data}")
+                    if 'create_time' in data and (current_timestamp - data['create_time']) > 1 * 60:
+                        self.ap.logger.info(f"WechatPadPro推送消息一分钟之前不处理: {data}")
                         return
                     # 这里需要确保ws_message是同步的，或者使用asyncio.run调用异步方法
                     asyncio.run(self.ws_message(data))
