@@ -1883,14 +1883,3 @@ class WeChatPadClient:
             Dict: 上传图片信息操作的结果
         """
         return self._sns_api.upload_friend_circle_image(self.token, image_data_list, video_data_list)
-
-    # SyncMessageApi methods
-    def get_sync_msg(self, key: str) -> Dict:
-        """
-        同步消息，ws协议; 下面有【同步消息-HTTP-轮询方式】
-        Args:
-            key: 账号唯一标识
-        Returns:
-            Dict: 同步消息操作的结果
-        """
-        return self._sync_message_api.get_sync_msg(self.token)
