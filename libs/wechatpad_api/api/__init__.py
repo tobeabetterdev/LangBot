@@ -1,6 +1,5 @@
 from .admin import AdminApi
 from .official_account import OfficialAccountApi
-from .sync_message import SyncMessageApi
 from .user import UserApi
 from .qy import QyApi
 from .equipment import EquipmentApi
